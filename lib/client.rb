@@ -37,8 +37,10 @@ class Client
   private
 
   def favorites_list
+    counts = get_counts
     result = []
-    get_counts.each { |k, v| result << k if v == get_counts.values.max }
+
+    counts.each { |k, v| result << k if v == counts.values.max }
     result
   end
 
