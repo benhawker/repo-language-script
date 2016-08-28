@@ -1,8 +1,8 @@
-# +Client+ - entry class that returns a users favorite lang after searching their Github repositories.
+# +Client+ - creates connection to Githib returning a parsed HTTParty response.
 #
 # Proposed usage:
 # => client = Client.new("some_github_login")
-# => client.favorite
+# => client.get_repositories
 
 require 'httparty'
 
@@ -21,6 +21,12 @@ class Client
       super("Your IP has been rate limited by Github, please try again later.")
     end
   end
+  # Raised when GitHub returns a 500 HTTP status code with a message including "Internal Server Error"
+  class InternalServerError < StandardError
+    def initialize
+      super("Github has returned an Internal Server Error. HTTP Status Code 500. Please try again.")
+    end
+  end
 
   BASE_URL = "https://api.github.com"
 
@@ -30,36 +36,20 @@ class Client
     @user = user
   end
 
-  def favorite
-    puts "#{user}'s favorite language seems to be #{favorites_list.join(favorites_list.size > 1 ? (" and ") : ())}."
-  end
-
-  private
-
-  def favorites_list
-    counts = get_counts
-    result = []
-
-    counts.each { |k, v| result << k if v == counts.values.max }
-    result
-  end
-
   def get_repositories
     response = self.class.get(url)
 
     case response.headers["status"]
       when "403 Forbidden" then raise LimitReached
       when "404 Not Found" then raise UserNotFound
+      when "500 Internal Server Error" then raise InternalServerError
     end
     response
   end
 
+  private
+
   def url
     BASE_URL + "/users/#{user}/repos"
-  end
-
-  def get_counts
-    array = get_repositories.map { |repo| repo["language"] }
-    Hash[array.uniq.map{ |i| [i, array.count(i)] }]
   end
 end
